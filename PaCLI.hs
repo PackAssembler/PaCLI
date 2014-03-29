@@ -85,11 +85,12 @@ downloadBuild config is_server d = do
     -- Download mods
     manager <- liftIO $ newManager conduitManagerSettings
     createDirectoryIfMissing False "mods"
-    mapConcurrently (downloadMod manager) $ filter (modTargetFilter is_server) (BP.getBuildMods d)
+    let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
+    mapConcurrently (downloadMod manager) filteredMods
     -- Download config
     when config $ downloadConfig manager (BP.getBuildConfig d)
     -- Save information about what we've just done
-    Current.saveBuild d
+    Current.saveBuild (d {BP.getBuildMods = filteredMods})
     -- Go back to original directory
     setCurrentDirectory ".."
 
@@ -103,12 +104,13 @@ updateToBuild config is_server d = do
         manager <- liftIO $ newManager conduitManagerSettings
         createDirectoryIfMissing False "mods"
         cur <- Current.loadCurrent
-        let comp = Current.compareToBuild cur $ filter (modTargetFilter is_server) (BP.getBuildMods d)
+        let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
+            comp = Current.compareToBuild cur filteredMods
         updateMods manager comp
         -- Download config
         when config $ downloadConfig manager (BP.getBuildConfig d)
         -- Save information about what we've just done
-        Current.saveBuild d
+        Current.saveBuild (d {BP.getBuildMods = filteredMods})
         -- Go back to original directory
         setCurrentDirectory ".."
     else putStrLn "No such pack downloaded")
