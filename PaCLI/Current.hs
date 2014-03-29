@@ -33,7 +33,7 @@ fromBuild :: BP.Build -> Current
 fromBuild (BP.Build buildID mcv _ _ fv _ mods) = Current buildID mcv fv $ toVersions mods
 
 toVersions :: [BP.Mod] -> [Version]
-toVersions mods = catMaybes $ foldl (\acc x -> (toVersion x):acc) [] mods
+toVersions mods = catMaybes $ foldl (\acc x -> toVersion x : acc) [] mods
 
 toVersion :: BP.Mod -> Maybe Version
 toVersion mod = if BP.getModTarget mod /= BP.Server then Just $ Version (BP.getModID mod) (BP.getVFilename mod) (BP.getVVersion mod) else Nothing
@@ -44,7 +44,7 @@ compareToBuild cur bMods = findNewOrUpdated cVs bMods ++ findDeleted bMods cVs
     where cVs = getVersions cur
 
 findNewOrUpdated :: [Version] -> [BP.Mod] -> [(Maybe Version, Maybe BP.Mod)]
-findNewOrUpdated vs = catMaybes . foldl (\acc x -> (newOrUpdatedEntry vs x):acc) []
+findNewOrUpdated vs = catMaybes . foldl (\acc x -> newOrUpdatedEntry vs x : acc) []
 
 newOrUpdatedEntry :: [Version] -> BP.Mod -> Maybe (Maybe Version, Maybe BP.Mod)
 newOrUpdatedEntry vs m = case found of Nothing -> Just (Nothing, Just m)
@@ -58,4 +58,4 @@ findVersion :: String -> [Version] -> Maybe Version
 findVersion target = foldl (\acc x -> if getMod x == target then Just x else acc) Nothing
 
 modInList :: String -> [BP.Mod] -> Bool
-modInList target = foldl (\acc x -> if BP.getModID x == target then True else acc) False
+modInList target = foldl (\acc x -> ((BP.getModID x == target) || acc)) False

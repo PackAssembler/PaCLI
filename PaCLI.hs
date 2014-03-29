@@ -39,13 +39,13 @@ main = do
 
 -- Command Runners
 downloadBuildCommand :: Bool -> Bool -> String -> IO ()
-downloadBuildCommand config is_server buildID = (getBuild $ packBuildURL buildID) >>= (\d -> downloadBuild config is_server d)
+downloadBuildCommand config is_server buildID = getBuild (packBuildURL buildID) >>= downloadBuild config is_server
 
 downloadPackCommand :: Bool -> Bool -> String -> IO ()
-downloadPackCommand config is_server packID = (getBuild $ latestBuildURL packID) >>= (\d -> downloadBuild config is_server d)
+downloadPackCommand config is_server packID = getBuild (latestBuildURL packID) >>= downloadBuild config is_server
 
 updatePackCommand :: Bool -> Bool -> String -> IO ()
-updatePackCommand config is_server packID = (getBuild $ latestBuildURL packID) >>= (\d -> updateToBuild config is_server d)
+updatePackCommand config is_server packID = getBuild (latestBuildURL packID) >>= updateToBuild config is_server
 
 showPackCommand :: String -> IO ()
 showPackCommand packID = doesDirectoryExist packID >>= (\x -> if x then showPack packID else putStrLn "No such pack downloaded")
