@@ -2,25 +2,28 @@ module PaCLI.Options (Command(..), mainParser) where
 
 import Options.Applicative
 
-data Command = CmdDownloadBuild Bool String
-             | CmdDownloadPack Bool String
-             | CmdUpdatePack Bool String
+data Command = CmdDownloadBuild Bool Bool String
+             | CmdDownloadPack Bool Bool String
+             | CmdUpdatePack Bool Bool String
              | CmdCreateZipPack String String
              | CmdShowPack String
 
 downloadBuild :: Parser Command
 downloadBuild = CmdDownloadBuild
     <$> switch (short 'c' <> long "config" <> help "Download config.")
+    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
     <*> argument str (metavar "BUILDID")
 
 downloadPack :: Parser Command
 downloadPack = CmdDownloadPack
     <$> switch (short 'c' <> long "config" <> help "Download config.")
+    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
     <*> argument str (metavar "PACKID")
 
 updatePack :: Parser Command
 updatePack = CmdUpdatePack
     <$> switch (short 'c' <> long "config" <> help "Download config.")
+    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
     <*> argument str (metavar "PACKID")
 
 createZipPack :: Parser Command

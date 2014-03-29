@@ -31,21 +31,21 @@ import System.Directory
 main = do
     cmd <- execParser $ info (helper <*> Options.mainParser) idm
     case cmd of
-        Options.CmdDownloadBuild x y -> downloadBuildCommand x y
-        Options.CmdDownloadPack x y -> downloadPackCommand x y
-        Options.CmdUpdatePack x y -> updatePackCommand x y
+        Options.CmdDownloadBuild x y z -> downloadBuildCommand x y z
+        Options.CmdDownloadPack x y z -> downloadPackCommand x y z
+        Options.CmdUpdatePack x y z -> updatePackCommand x y z
         Options.CmdCreateZipPack x y -> createZipPackCommand x y
         Options.CmdShowPack x -> showPackCommand x
 
 -- Command Runners
-downloadBuildCommand :: Bool -> String -> IO ()
-downloadBuildCommand config buildID = (getBuild $ packBuildURL buildID) >>= (\d -> downloadBuild config d)
+downloadBuildCommand :: Bool -> Bool -> String -> IO ()
+downloadBuildCommand config is_server buildID = (getBuild $ packBuildURL buildID) >>= (\d -> downloadBuild config is_server d)
 
-downloadPackCommand :: Bool -> String -> IO ()
-downloadPackCommand config packID = (getBuild $ latestBuildURL packID) >>= (\d -> downloadBuild config d)
+downloadPackCommand :: Bool -> Bool -> String -> IO ()
+downloadPackCommand config is_server packID = (getBuild $ latestBuildURL packID) >>= (\d -> downloadBuild config is_server d)
 
-updatePackCommand :: Bool -> String -> IO ()
-updatePackCommand config packID = (getBuild $ latestBuildURL packID) >>= (\d -> updateToBuild config d)
+updatePackCommand :: Bool -> Bool -> String -> IO ()
+updatePackCommand config is_server packID = (getBuild $ latestBuildURL packID) >>= (\d -> updateToBuild config is_server d)
 
 showPackCommand :: String -> IO ()
 showPackCommand packID = doesDirectoryExist packID >>= (\x -> if x then showPack packID else putStrLn "No such pack downloaded")
@@ -65,8 +65,18 @@ showPack packID = do
     mapM_ (putStrLn . ("- " ++) . Current.getFilename) $ Current.getVersions c
 
 -- Update/Download Build/Pack Functions
-downloadBuild :: Bool -> BP.Build -> IO ()
-downloadBuild config d = do
+modTargetFilter :: Bool -> BP.Mod -> Bool
+modTargetFilter is_server mod = targetFilter is_server (BP.getModTarget mod)
+
+targetFilter :: Bool -> BP.Target -> Bool
+targetFilter _ BP.Both    = True
+targetFilter False target = case target of BP.Client -> True
+                                           BP.Server -> False
+targetFilter True target  = case target of BP.Client -> False
+                                           BP.Server -> True
+
+downloadBuild :: Bool -> Bool -> BP.Build -> IO ()
+downloadBuild config is_server d = do
     let packID = BP.getPackID d
     -- Go to pack directory
     doesDirectoryExist packID >>= (\x -> when x $ removeDirectoryRecursive packID)
@@ -75,7 +85,7 @@ downloadBuild config d = do
     -- Download mods
     manager <- liftIO $ newManager conduitManagerSettings
     createDirectoryIfMissing False "mods"
-    mapConcurrently (downloadMod manager) $ BP.getBuildMods d
+    mapConcurrently (downloadMod manager) $ filter (modTargetFilter is_server) (BP.getBuildMods d)
     -- Download config
     when config $ downloadConfig manager (BP.getBuildConfig d)
     -- Save information about what we've just done
@@ -83,8 +93,8 @@ downloadBuild config d = do
     -- Go back to original directory
     setCurrentDirectory ".."
 
-updateToBuild :: Bool -> BP.Build -> IO ()
-updateToBuild config d = do
+updateToBuild :: Bool -> Bool -> BP.Build -> IO ()
+updateToBuild config is_server d = do
     let packID = BP.getPackID d
     -- Go to pack directory if it exists, otherwise, just don't do anything
     doesDirectoryExist packID >>= (\x -> if x then do
@@ -93,8 +103,7 @@ updateToBuild config d = do
         manager <- liftIO $ newManager conduitManagerSettings
         createDirectoryIfMissing False "mods"
         cur <- Current.loadCurrent
-        let comp = Current.compareToBuild cur d
-        --putStrLn $ show comp
+        let comp = Current.compareToBuild cur $ filter (modTargetFilter is_server) (BP.getBuildMods d)
         updateMods manager comp
         -- Download config
         when config $ downloadConfig manager (BP.getBuildConfig d)

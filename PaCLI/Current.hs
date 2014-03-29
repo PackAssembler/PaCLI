@@ -39,10 +39,9 @@ toVersion :: BP.Mod -> Maybe Version
 toVersion mod = if BP.getModTarget mod /= BP.Server then Just $ Version (BP.getModID mod) (BP.getVFilename mod) (BP.getVVersion mod) else Nothing
 
 -- Compare, for updates
-compareToBuild :: Current -> BP.Build -> [(Maybe Version, Maybe BP.Mod)]
-compareToBuild cur build = findNewOrUpdated cVs bMods ++ findDeleted bMods cVs
-    where bMods = BP.getBuildMods build
-          cVs = getVersions cur
+compareToBuild :: Current -> [BP.Mod] -> [(Maybe Version, Maybe BP.Mod)]
+compareToBuild cur bMods = findNewOrUpdated cVs bMods ++ findDeleted bMods cVs
+    where cVs = getVersions cur
 
 findNewOrUpdated :: [Version] -> [BP.Mod] -> [(Maybe Version, Maybe BP.Mod)]
 findNewOrUpdated vs = catMaybes . foldl (\acc x -> (newOrUpdatedEntry vs x):acc) []
