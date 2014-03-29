@@ -118,8 +118,8 @@ updateMods man = mapConcurrently (updateMod man)
 
 updateMod :: Manager -> (Maybe Current.Version, Maybe BP.Mod) -> IO ()
 updateMod man (Nothing, Just m) = downloadMod man m
-updateMod man (Just v, Nothing) = removeFile ("mods/" ++ Current.getFilename v)
-updateMod man (Just v, Just m) = removeFile ("mods/" ++ Current.getFilename v) >> downloadMod man m
+updateMod man (Just v, Nothing) = removeFileColor ("mods/" ++ Current.getFilename v)
+updateMod man (Just v, Just m) = removeFileColor ("mods/" ++ Current.getFilename v) >> downloadMod man m
 
 -- Pack Zipper
 createZipPack :: String -> String -> IO ()
@@ -223,3 +223,8 @@ downloadFile manager url filename =
 
         -- Success!
         liftIO . putStrLn $ "\ESC[0;32mDownloaded " ++ filename ++ "\ESC[0m"
+
+removeFileColor :: String -> IO ()
+removeFileColor filename = do
+    removeFile filename
+    putStrLn $ "\ESC[0;31mRemove " ++ filename ++ "\ESC[0m"
