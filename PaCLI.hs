@@ -98,22 +98,23 @@ updateToBuild :: Bool -> Bool -> BP.Build -> IO ()
 updateToBuild config is_server d = do
     let packID = BP.getPackID d
     -- Go to pack directory if it exists, otherwise, just don't do anything
-    doesDirectoryExist packID >>= (\x -> if x then do
-        setCurrentDirectory packID
-        -- Download mods
-        manager <- liftIO $ newManager conduitManagerSettings
-        createDirectoryIfMissing False "mods"
-        cur <- Current.loadCurrent
-        let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
-            comp = Current.compareToBuild cur filteredMods
-        updateMods manager comp
-        -- Download config
-        when config $ downloadConfig manager (BP.getBuildConfig d)
-        -- Save information about what we've just done
-        Current.saveBuild (d {BP.getBuildMods = filteredMods})
-        -- Go back to original directory
-        setCurrentDirectory ".."
-    else putStrLn "No such pack downloaded")
+    doesDirectoryExist packID >>= (\x -> if x
+        then do
+            setCurrentDirectory packID
+            -- Download mods
+            manager <- liftIO $ newManager conduitManagerSettings
+            createDirectoryIfMissing False "mods"
+            cur <- Current.loadCurrent
+            let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
+                comp = Current.compareToBuild cur filteredMods
+            updateMods manager comp
+            -- Download config
+            when config $ downloadConfig manager (BP.getBuildConfig d)
+            -- Save information about what we've just done
+            Current.saveBuild (d {BP.getBuildMods = filteredMods})
+            -- Go back to original directory
+            setCurrentDirectory ".."
+        else putStrLn "No such pack downloaded")
 
 updateMods :: Manager -> [(Maybe Current.Version, Maybe BP.Mod)] -> IO [()]
 updateMods man = mapConcurrently (updateMod man)
@@ -229,4 +230,4 @@ downloadFile manager url filename =
 removeFileColor :: String -> IO ()
 removeFileColor filename = do
     removeFile filename
-    putStrLn $ "\ESC[0;31mRemove " ++ filename ++ "\ESC[0m"
+    putStrLn $ "\ESC[0;31mRemoved " ++ filename ++ "\ESC[0m"
