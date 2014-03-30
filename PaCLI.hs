@@ -69,11 +69,9 @@ modTargetFilter :: Bool -> BP.Mod -> Bool
 modTargetFilter is_server mod = targetFilter is_server (BP.getModTarget mod)
 
 targetFilter :: Bool -> BP.Target -> Bool
-targetFilter _ BP.Both    = True
-targetFilter False target = case target of BP.Client -> True
-                                           BP.Server -> False
-targetFilter True target  = case target of BP.Client -> False
-                                           BP.Server -> True
+targetFilter _         BP.Both   = True
+targetFilter is_server BP.Client = not is_server
+targetFilter is_server BP.Server = is_server
 
 downloadBuild :: Bool -> Bool -> BP.Build -> IO ()
 downloadBuild config is_server d = do
@@ -116,13 +114,13 @@ updateToBuild config is_server d = do
             setCurrentDirectory ".."
         else putStrLn "No such pack downloaded")
 
-updateMods :: Manager -> [(Maybe Current.Version, Maybe BP.Mod)] -> IO [()]
+updateMods :: Manager -> [Current.UpdateAction] -> IO [()]
 updateMods man = mapConcurrently (updateMod man)
 
-updateMod :: Manager -> (Maybe Current.Version, Maybe BP.Mod) -> IO ()
-updateMod man (Nothing, Just m) = downloadMod man m
-updateMod man (Just v, Nothing) = removeFileColor ("mods/" ++ Current.getFilename v)
-updateMod man (Just v, Just m) = removeFileColor ("mods/" ++ Current.getFilename v) >> downloadMod man m
+updateMod :: Manager -> Current.UpdateAction -> IO ()
+updateMod man (Current.Install m)   = downloadMod man m
+updateMod man (Current.Remove v)    = removeFileColor ("mods/" ++ Current.getFilename v)
+updateMod man (Current.Replace v m) = removeFileColor ("mods/" ++ Current.getFilename v) >> downloadMod man m
 
 -- Pack Zipper
 createZipPack :: String -> String -> IO ()

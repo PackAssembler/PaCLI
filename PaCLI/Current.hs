@@ -1,4 +1,4 @@
-module PaCLI.Current (Version(..), Current(..), saveBuild, saveCurrent, loadCurrent, fromBuild, compareToBuild) where
+module PaCLI.Current (Version(..), Current(..), UpdateAction(..), saveBuild, saveCurrent, loadCurrent, fromBuild, compareToBuild) where
 
 import Data.Maybe
 
@@ -14,6 +14,8 @@ data Current = Current { getBuild :: String -- The BuildID
                        , getForgeVersion :: String -- Forge version
                        , getVersions :: [Version] -- The versions that are currently on the machine
                        } deriving (Show, Read)
+
+data UpdateAction = Install BP.Mod | Replace Version BP.Mod | Remove Version deriving (Show)
 
 currentFile :: String
 currentFile = "current.dat"
@@ -33,26 +35,26 @@ fromBuild :: BP.Build -> Current
 fromBuild (BP.Build buildID mcv _ _ fv _ mods) = Current buildID mcv fv $ toVersions mods
 
 toVersions :: [BP.Mod] -> [Version]
-toVersions mods = catMaybes $ foldl (\acc x -> toVersion x : acc) [] mods
+toVersions = foldl (\acc x -> toVersion x : acc) []
 
-toVersion :: BP.Mod -> Maybe Version
-toVersion mod = if BP.getModTarget mod /= BP.Server then Just $ Version (BP.getModID mod) (BP.getVFilename mod) (BP.getVVersion mod) else Nothing
+toVersion :: BP.Mod -> Version
+toVersion mod = Version (BP.getModID mod) (BP.getVFilename mod) $ BP.getVVersion mod
 
 -- Compare, for updates
-compareToBuild :: Current -> [BP.Mod] -> [(Maybe Version, Maybe BP.Mod)]
+compareToBuild :: Current -> [BP.Mod] -> [UpdateAction]
 compareToBuild cur bMods = findNewOrUpdated cVs bMods ++ findDeleted bMods cVs
     where cVs = getVersions cur
 
-findNewOrUpdated :: [Version] -> [BP.Mod] -> [(Maybe Version, Maybe BP.Mod)]
+findNewOrUpdated :: [Version] -> [BP.Mod] -> [UpdateAction]
 findNewOrUpdated vs = catMaybes . foldl (\acc x -> newOrUpdatedEntry vs x : acc) []
 
-newOrUpdatedEntry :: [Version] -> BP.Mod -> Maybe (Maybe Version, Maybe BP.Mod)
-newOrUpdatedEntry vs m = case found of Nothing -> Just (Nothing, Just m)
-                                       (Just jfound) -> if getVersion jfound == BP.getVVersion m then Nothing else Just (found, Just m)
+newOrUpdatedEntry :: [Version] -> BP.Mod -> Maybe UpdateAction
+newOrUpdatedEntry vs m = case found of Nothing -> Just $ Install m
+                                       (Just jfound) -> if getVersion jfound == BP.getVVersion m then Nothing else Just $ Replace jfound m
     where found = findVersion (BP.getModID m) vs
 
-findDeleted :: [BP.Mod] -> [Version] -> [(Maybe Version, Maybe BP.Mod)]
-findDeleted ms = foldl (\acc x -> if modInList (getMod x) ms then acc else (Just x, Nothing):acc) []
+findDeleted :: [BP.Mod] -> [Version] -> [UpdateAction]
+findDeleted ms = foldl (\acc x -> if modInList (getMod x) ms then acc else Remove x : acc) []
 
 findVersion :: String -> [Version] -> Maybe Version
 findVersion target = foldl (\acc x -> if getMod x == target then Just x else acc) Nothing

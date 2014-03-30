@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                PaCLI
-version:             0.1.0
+version:             0.1.1
 synopsis:            A CLI application which interfaces with the PackAssembler server software
 -- description:         
 homepage:            http://mml.stephenmac.com/
