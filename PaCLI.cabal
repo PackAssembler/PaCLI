@@ -14,8 +14,11 @@ maintainer:          stephenmac7@gmail.com
 category:            Network
 build-type:          Simple
 cabal-version:       >=1.8
+source-repository head
+    type: git
+    location: git://github.com/PackAssembler/PaCLI.git
 
 executable pacli
   main-is:             PaCLI.hs
-  -- other-modules:       
+  other-modules:       PaCLI.Options, PaCLI.BuildParser, PaCLI.Current
   build-depends:       base ==4.6.*, zip-archive, http-conduit, conduit, aeson, async, optparse-applicative, directory, filepath, network, bytestring, transformers
