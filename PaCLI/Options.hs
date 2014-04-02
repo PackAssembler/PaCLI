@@ -11,19 +11,19 @@ data Command = CmdDownloadBuild Bool Bool String
 downloadBuild :: Parser Command
 downloadBuild = CmdDownloadBuild
     <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
+    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
     <*> argument str (metavar "BUILDID")
 
 downloadPack :: Parser Command
 downloadPack = CmdDownloadPack
     <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
+    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
     <*> argument str (metavar "PACKID")
 
 updatePack :: Parser Command
 updatePack = CmdUpdatePack
     <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, not client mods")
+    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
     <*> argument str (metavar "PACKID")
 
 createZipPack :: Parser Command
