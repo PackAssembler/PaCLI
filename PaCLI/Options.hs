@@ -36,8 +36,8 @@ showPack = CmdShowPack <$> argument str (metavar "PACKID")
 
 mainParser :: Parser Command
 mainParser = subparser
-    (command "downloadBuild" (info (helper <*> downloadBuild) (progDesc "Downloads a Pack Build, overwriting prior downloads of pack")) <>
-     command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting prior downloads of pack")) <>
+    (command "downloadBuild" (info (helper <*> downloadBuild) (progDesc "Downloads a Pack Build, overwriting prior downloads of the pack and everything in the pack's folder")) <>
+     command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting prior downloads of the pack and everything in the pack's folder")) <>
      command "updatePack" (info (helper <*> updatePack) (progDesc "Updates a Pack to the latest build")) <>
      command "createZip" (info (helper <*> createZipPack) (progDesc "Creates a zip pack from an existing directory")) <>
      command "showPack" (info (helper <*> showPack) (progDesc "Shows information about a downloaded pack")))
