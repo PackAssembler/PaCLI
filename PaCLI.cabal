@@ -4,7 +4,7 @@
 name:                PaCLI
 version:             0.1.1
 synopsis:            A CLI application which interfaces with the PackAssembler server software
--- description:         
+description:         PaCLI is a new way to interact with PackAssembler, making it available from the terminal for easy usage on servers and clients alike.
 homepage:            http://mml.stephenmac.com/
 license:             GPL-3
 license-file:        LICENSE
