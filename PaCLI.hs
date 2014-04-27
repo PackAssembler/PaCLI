@@ -28,35 +28,40 @@ import System.Environment
 import System.Directory
 
 -- IO Stuff
+chooseDir :: Options.OptionGroup -> String
+chooseDir (Options.PackOptions maybeDir packId) = fromMaybe packId maybeDir
+
+directorize :: Bool -> Options.OptionGroup -> IO Bool
+directorize clean opts = let dir = chooseDir opts in doesDirectoryExist dir >>= (\x -> case clean of
+    True -> (do
+        when x $ removeDirectoryRecursive dir
+        createDirectory dir
+        setCurrentDirectory dir
+        return True)
+    False -> if x then setCurrentDirectory dir >> return True else putStrLn "No Such Pack Downloaded!" >> return False)
+
 main = do
     cmd <- execParser $ info (helper <*> Options.mainParser) idm
     case cmd of
-        Options.CmdDownloadBuild x y z -> downloadBuildCommand x y z
-        Options.CmdDownloadPack x y z -> downloadPackCommand x y z
-        Options.CmdUpdatePack x y z -> updatePackCommand x y z
-        Options.CmdCreateZipPack x y -> createZipPackCommand x y
-        Options.CmdShowPack x -> showPackCommand x
+        Options.CmdDownloadPack buildn (Options.DownloadOptions config is_server) packOpts -> do
+            directorize True packOpts
+            getBuild (packBuildURL (Options.getPackId packOpts) buildn) >>= downloadBuild config is_server
 
--- Command Runners
-downloadBuildCommand :: Bool -> Bool -> String -> IO ()
-downloadBuildCommand config is_server buildID = getBuild (packBuildURL buildID) >>= downloadBuild config is_server
+        Options.CmdUpdatePack (Options.DownloadOptions config is_server) packOpts -> do
+            possible <- directorize False packOpts
+            when possible $ getBuild (packBuildURL (Options.getPackId packOpts) "-1") >>= updateToBuild config is_server
 
-downloadPackCommand :: Bool -> Bool -> String -> IO ()
-downloadPackCommand config is_server packID = getBuild (latestBuildURL packID) >>= downloadBuild config is_server
+        Options.CmdCreateZipPack format packOpts -> do
+            possible <- directorize False packOpts
+            when possible $ createZipPack format (Options.getPackId packOpts)
 
-updatePackCommand :: Bool -> Bool -> String -> IO ()
-updatePackCommand config is_server packID = getBuild (latestBuildURL packID) >>= updateToBuild config is_server
-
-showPackCommand :: String -> IO ()
-showPackCommand packID = doesDirectoryExist packID >>= (\x -> if x then showPack packID else putStrLn "No such pack downloaded")
-
-createZipPackCommand :: String -> String -> IO ()
-createZipPackCommand format packID = doesDirectoryExist packID >>= (\x -> when x $ createZipPack format packID)
+        Options.CmdShowPack dir -> do
+            possible <- directorize False (Options.PackOptions (Just dir) "")
+            when possible showPack
 
 -- Show Pack
-showPack :: String -> IO ()
-showPack packID = do
-    setCurrentDirectory packID
+showPack :: IO ()
+showPack = do
     c <- Current.loadCurrent
     putStrLn $ "Build: " ++ Current.getBuild c
     putStrLn $ "Minecraft Version: " ++ Current.getMCV c
@@ -75,11 +80,6 @@ targetFilter is_server BP.Server = is_server
 
 downloadBuild :: Bool -> Bool -> BP.Build -> IO ()
 downloadBuild config is_server d = do
-    let packID = BP.getPackID d
-    -- Go to pack directory
-    doesDirectoryExist packID >>= (\x -> when x $ removeDirectoryRecursive packID)
-    createDirectory packID
-    setCurrentDirectory packID
     -- Download mods
     manager <- liftIO $ newManager conduitManagerSettings
     createDirectoryIfMissing False "mods"
@@ -94,25 +94,17 @@ downloadBuild config is_server d = do
 
 updateToBuild :: Bool -> Bool -> BP.Build -> IO ()
 updateToBuild config is_server d = do
-    let packID = BP.getPackID d
-    -- Go to pack directory if it exists, otherwise, just don't do anything
-    doesDirectoryExist packID >>= (\x -> if x
-        then do
-            setCurrentDirectory packID
-            -- Download mods
-            manager <- liftIO $ newManager conduitManagerSettings
-            createDirectoryIfMissing False "mods"
-            cur <- Current.loadCurrent
-            let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
-                comp = Current.compareToBuild cur filteredMods
-            updateMods manager comp
-            -- Download config
-            when config $ downloadConfig manager (BP.getBuildConfig d)
-            -- Save information about what we've just done
-            Current.saveBuild (d {BP.getBuildMods = filteredMods})
-            -- Go back to original directory
-            setCurrentDirectory ".."
-        else putStrLn "No such pack downloaded")
+    -- Download mods
+    manager <- liftIO $ newManager conduitManagerSettings
+    createDirectoryIfMissing False "mods"
+    cur <- Current.loadCurrent
+    let filteredMods = filter (modTargetFilter is_server) $ BP.getBuildMods d
+        comp = Current.compareToBuild cur filteredMods
+    updateMods manager comp
+    -- Download config
+    when config $ downloadConfig manager (BP.getBuildConfig d)
+    -- Save information about what we've just done
+    Current.saveBuild (d {BP.getBuildMods = filteredMods})
 
 updateMods :: Manager -> [Current.UpdateAction] -> IO [()]
 updateMods man = mapConcurrently (updateMod man)
@@ -125,8 +117,6 @@ updateMod man (Current.Replace v m) = removeFileColor ("mods/" ++ Current.getFil
 -- Pack Zipper
 createZipPack :: String -> String -> IO ()
 createZipPack "technic" packID = do
-    -- Go to pack directory
-    setCurrentDirectory packID
     -- Download forge
     manager <- liftIO $ newManager conduitManagerSettings
     createDirectoryIfMissing False "bin"
@@ -140,11 +130,8 @@ createZipPack "technic" packID = do
     -- Delete bin
     removeFile "bin/modpack.jar"
     removeDirectory "bin"
-    -- Go back to original directory
-    setCurrentDirectory ".."
+
 createZipPack "ftb" packID = do
-    -- Go to pack directory
-    setCurrentDirectory packID
     -- Download forge
     manager <- liftIO $ newManager conduitManagerSettings
     let forgeLoc = "forge.jar"
@@ -159,8 +146,6 @@ createZipPack "ftb" packID = do
     C.writeFile "ftb.zip" (fromArchive archive)
     -- Delete forge
     removeFile forgeLoc
-    -- Go back to the original directory
-    setCurrentDirectory ".."
 
 -- Archive Functions
 -- Check for existence before adding to archive
@@ -175,11 +160,8 @@ baseURL = "http://mml.stephenmac.com/"
 downloadURL :: String -> String
 downloadURL mvid = baseURL ++ "mods/versions/" ++ mvid ++ "/download"
 
-packBuildURL :: String -> String
-packBuildURL pbid = baseURL ++ "packs/builds/" ++ pbid
-
-latestBuildURL :: String -> String
-latestBuildURL pid = baseURL ++ "packs/" ++ pid ++ "/download"
+packBuildURL :: String -> String -> String
+packBuildURL packid buildn = baseURL ++ "packs/" ++ packid ++ "/builds/" ++ buildn
 
 forgeURL :: String -> String -> String
 forgeURL mcv fv = "http://files.minecraftforge.net/maven/net/minecraftforge/forge/" ++ hyphenated ++ "/forge-" ++ hyphenated ++ "-universal.jar"

@@ -1,43 +1,46 @@
-module PaCLI.Options (Command(..), mainParser) where
+module PaCLI.Options (Command(..), OptionGroup(..), mainParser) where
 
 import Options.Applicative
 
-data Command = CmdDownloadBuild Bool Bool String
-             | CmdDownloadPack Bool Bool String
-             | CmdUpdatePack Bool Bool String
-             | CmdCreateZipPack String String
+data OptionGroup = PackOptions { getDir :: Maybe String, getPackId :: String }
+                 | DownloadOptions { getConfig :: Bool, getIsServer :: Bool }
+
+data Command = CmdDownloadPack String OptionGroup OptionGroup
+             | CmdUpdatePack OptionGroup OptionGroup
+             | CmdCreateZipPack String OptionGroup
              | CmdShowPack String
 
-downloadBuild :: Parser Command
-downloadBuild = CmdDownloadBuild
-    <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
-    <*> argument str (metavar "BUILDID")
-
-downloadPack :: Parser Command
-downloadPack = CmdDownloadPack
-    <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
+-- OptionGroup parsers
+packOpt :: Parser OptionGroup
+packOpt = PackOptions
+    <$> optional (strOption (short 'd' <> long "directory" <> metavar "DIR" <> help "Use DIR instead of Pack ID"))
     <*> argument str (metavar "PACKID")
+
+downloadOpt :: Parser OptionGroup
+downloadOpt = DownloadOptions
+    <$> switch (short 'c' <> long "config" <> help "Download config.")
+    <*> switch (short 's' <> long "server" <> help "Download server mods instead of client mods")
+
+-- Command parsers
+downloadPack :: Parser Command
+downloadPack = CmdDownloadPack 
+    <$> strOption (short 'b' <> long "build" <> metavar "BUILD" <> help "Use BUILD instead of the latest build" <> value "-1")
+    <*> downloadOpt <*> packOpt
 
 updatePack :: Parser Command
-updatePack = CmdUpdatePack
-    <$> switch (short 'c' <> long "config" <> help "Download config.")
-    <*> switch (short 's' <> long "server" <> help "Download server, ignoring client mods")
-    <*> argument str (metavar "PACKID")
+updatePack = CmdUpdatePack <$> downloadOpt <*> packOpt
 
 createZipPack :: Parser Command
 createZipPack = CmdCreateZipPack
-    <$> flag "technic" "ftb" (short 'f' <> long "ftb" <> help "Use FTB Format, rather than Technic.")
-    <*> argument str (metavar "PACKID")
+    <$> flag "technic" "ftb" (short 'f' <> long "ftb" <> help "Use FTB Format, rather than Technic")
+    <*> packOpt
 
 showPack :: Parser Command
-showPack = CmdShowPack <$> argument str (metavar "PACKID")
+showPack = CmdShowPack <$> argument str (metavar "DIR")
 
 mainParser :: Parser Command
 mainParser = subparser
-    (command "downloadBuild" (info (helper <*> downloadBuild) (progDesc "Downloads a Pack Build, overwriting prior downloads of the pack and everything in the pack's folder")) <>
-     command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting prior downloads of the pack and everything in the pack's folder")) <>
+    (command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting prior downloads of the pack and everything in the pack's folder")) <>
      command "updatePack" (info (helper <*> updatePack) (progDesc "Updates a Pack to the latest build")) <>
      command "createZip" (info (helper <*> createZipPack) (progDesc "Creates a zip pack from an existing directory")) <>
      command "showPack" (info (helper <*> showPack) (progDesc "Shows information about a downloaded pack")))
