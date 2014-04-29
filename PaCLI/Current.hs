@@ -1,4 +1,4 @@
-module PaCLI.Current (Version(..), Current(..), UpdateAction(..), saveBuild, saveCurrent, loadCurrent, fromBuild, compareToBuild) where
+module PaCLI.Current (Version(..), Current(..), UpdateAction(..), saveBuild, saveCurrent, loadCurrent, fromBuild, compareToBuild, currentFile) where
 
 import Data.Maybe
 

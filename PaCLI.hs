@@ -31,14 +31,15 @@ import System.Directory
 chooseDir :: Options.OptionGroup -> String
 chooseDir (Options.PackOptions maybeDir packId) = fromMaybe packId maybeDir
 
+cleanDirectory :: IO ()
+cleanDirectory = do
+    doesDirectoryExist "mods" >>= flip when (removeDirectoryRecursive "mods")
+    doesFileExist "current.dat" >>= flip when (removeFile "current.dat")
+
 directorize :: Bool -> Options.OptionGroup -> IO Bool
-directorize clean opts = let dir = chooseDir opts in doesDirectoryExist dir >>= (\x -> case clean of
-    True -> (do
-        when x $ removeDirectoryRecursive dir
-        createDirectory dir
-        setCurrentDirectory dir
-        return True)
-    False -> if x then setCurrentDirectory dir >> return True else putStrLn "No Such Pack Downloaded!" >> return False)
+directorize clean opts = let dir = chooseDir opts in doesDirectoryExist dir >>= (\x -> if clean then
+    (if x then setCurrentDirectory dir >> cleanDirectory else createDirectory dir >> setCurrentDirectory dir) >> return True else
+    (if x then setCurrentDirectory dir >> return True else putStrLn "No Such Pack Downloaded!" >> return False))
 
 main = do
     cmd <- execParser $ info (helper <*> Options.mainParser) idm

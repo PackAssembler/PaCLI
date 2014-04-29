@@ -40,7 +40,7 @@ showPack = CmdShowPack <$> argument str (metavar "DIR")
 
 mainParser :: Parser Command
 mainParser = subparser
-    (command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting prior downloads of the pack and everything in the pack's folder")) <>
+    (command "downloadPack" (info (helper <*> downloadPack) (progDesc "Downloads the latest build of a Pack, overwriting the mods directory and current.dat, if they exist")) <>
      command "updatePack" (info (helper <*> updatePack) (progDesc "Updates a Pack to the latest build")) <>
      command "createZip" (info (helper <*> createZipPack) (progDesc "Creates a zip pack from an existing directory")) <>
      command "showPack" (info (helper <*> showPack) (progDesc "Shows information about a downloaded pack")))
