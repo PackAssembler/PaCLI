@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Codec.Archive.Zip
 
+import Control.Monad.Trans.Resource (runResourceT)
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad (foldM, when)
@@ -175,7 +176,10 @@ forgeURL mcv fv = "http://files.minecraftforge.net/maven/net/minecraftforge/forg
 --- Specific Structures
 downloadConfig :: Manager -> Maybe String -> IO ()
 downloadConfig man Nothing = return ()
-downloadConfig man (Just config) = downloadAndExtract man config
+downloadConfig man (Just config) = do
+    removeDirectoryIfExists "config"
+    downloadAndExtract man config
+    putStrLn "Config successfully downloaded and extracted."
 
 downloadMod :: Manager -> BP.Mod -> IO ()
 downloadMod manager mod = downloadFile manager (downloadURL $ BP.getVVersion mod) ("mods/" ++ BP.getVFilename mod)

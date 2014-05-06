@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                PaCLI
-version:             0.1.1
+version:             0.2.1
 synopsis:            A CLI application which interfaces with the PackAssembler server software
 description:         PaCLI is a new way to interact with PackAssembler, making it available from the terminal for easy usage on servers and clients alike.
 homepage:            http://mml.stephenmac.com/
@@ -21,4 +21,4 @@ source-repository head
 executable pacli
   main-is:             PaCLI.hs
   other-modules:       PaCLI.Options, PaCLI.BuildParser, PaCLI.Current
-  build-depends:       base ==4.6.*, zip-archive, http-conduit, conduit, aeson, async, optparse-applicative, directory, filepath, network, bytestring, transformers
+  build-depends:       base ==4.6.*, zip-archive, http-conduit, conduit>=1.1.0, conduit-extra, aeson, async, optparse-applicative, directory, filepath, network, bytestring, transformers, resourcet
